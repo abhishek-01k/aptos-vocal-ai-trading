@@ -1,36 +1,53 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Aptos AI trading
 
-## Getting Started
+- "Trade Smartly on Aptos with just your Voice – In Any Language! and get the best routes for swap, cross-swap, and bridge operations on different chains."
 
-First, run the development server:
+This project utilizes solvers to build and execute transactions on behalf of the users.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+### Description
+Experience seamless trading and portfolio management through voice commands in any language. Leveraging advanced AI and speech technologies, our platform translates your spoken commands into actionable trades and portfolio adjustments. Harness the power of the Speech API, OpenAI, and the Brian API and SDK to make trading effortless and multilingual.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Problem Statement
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+**1. Wallet Setup Complexity:**  
+Users often face difficulties in setting up and managing crypto wallets, a prerequisite for engaging in DeFi activities. This technical barrier discourages potential users from entering the space.
 
-## Learn More
+**2. Language Barriers:**  
+The global nature of cryptocurrency is hindered by language barriers, limiting non-English speakers' ability to participate effectively in trading and portfolio management.
 
-To learn more about Next.js, take a look at the following resources:
+**3. Knowledge Barriers:**  
+Many users lack the necessary understanding of DeFi protocols, making it challenging to navigate the complexities of decentralized finance. This knowledge gap prevents them from making informed decisions and taking advantage of the best trading opportunities available.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+**4. Optimal Trade Routes:**  
+Users struggle to identify the best routes for swaps, cross-chain swaps, and bridge operations across different chains. This lack of clarity can result in suboptimal trades and missed opportunities.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+**5. Onboarding Challenges:**  
+The onboarding process for new users into the DeFi ecosystem is often cumbersome, involving multiple steps and a steep learning curve. Simplifying this process is crucial to enhancing user adoption.
 
-## Deploy on Vercel
+**6. Crypto-to-Fiat Conversion:**  
+Converting cryptocurrencies to fiat currency remains a significant hurdle for users, especially those unfamiliar with the available tools and platforms that facilitate this process.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### Features
+- **AppKit Swaps Feature:** We are Empowering users with integrated token swapping, simplifying the process of exchanging tokens for a frictionless experience within the app.
+- **AppKit On-Ramp:** Transform user experiences with in-app crypto purchases, enabling direct fiat-to-crypto transactions.
+- **Multilingual Voice Commands:** Execute trades and manage your portfolio using voice commands in languages like Spanish, German, French, and more.
+- **AI-Driven Translation:** Utilize advanced AI to accurately translate your voice commands, ensuring precise execution of your trading strategies.
+- **Speech API Integration:** Benefit from state-of-the-art speech recognition technology for seamless interaction.
+- **OpenAI Integration:** Leverage OpenAI for natural language processing and understanding.
+- **Brian API & SDK:** Solve intents and execute interactions with high accuracy and efficiency.
+- **Secure and Reliable:** Ensure your transactions are secure with robust backend technology.
+- **User-Friendly Interface:** Enjoy an intuitive and responsive design tailored for a smooth user experience.
+- **Wallet Connect Integration:** Seamlessly connect your preferred crypto wallets for secure and straightforward transactions.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### How It Works
+1. **Voice Input:** Speak your trading commands in your preferred language.
+2. **Speech Recognition:** The Speech API captures and transcribes your voice input.
+3. **AI Translation:** OpenAI translates the transcribed text into English or the platform's base language.
+4. **Intent Analysis:** The Brian API and SDK analyze the translated commands to understand the user's intent.
+5. **Execution:** The platform executes the trade or portfolio action based on the analyzed intent.
+6. **Token Swapping:** We are Utilizing AppKit’s Swaps feature to execute seamless token exchanges directly within the app.
+7. **Crypto Purchases:** Leveraging AppKit’s On-Ramp to facilitate in-app crypto purchases, thereby bridging the gap between fiat and digital currencies.
+8. **Feedback:** Receive real-time feedback and confirmation of your actions, all via voice interaction.
+
+This streamlined process ensures that language barriers are eliminated, making trading more accessible and convenient for users worldwide.
