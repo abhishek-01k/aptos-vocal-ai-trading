@@ -10,6 +10,7 @@ import { useAccount } from "wagmi";
 import { mainnet, sepolia } from "wagmi/chains";
 import { sendTransaction } from "@wagmi/core";
 import { config } from "@/context/web3modal";
+import { Button } from "./ui/button";
 
 const languageCodes: Record<string, string> = languageCodesData;
 const countryCodes: Record<string, string> = countryCodesData;
@@ -58,7 +59,7 @@ const TradewithAI = () => {
       return;
     }
     if ("onvoiceschanged" in window.speechSynthesis) {
-      window.speechSynthesis.onvoiceschanged = function() {
+      window.speechSynthesis.onvoiceschanged = function () {
         const voices = window.speechSynthesis.getVoices();
         setVoices(voices);
       };
@@ -78,15 +79,15 @@ const TradewithAI = () => {
       window.SpeechRecognition || window.webkitSpeechRecognition;
     recognitionRef.current = new SpeechRecognition();
 
-    recognitionRef.current.onstart = function() {
+    recognitionRef.current.onstart = function () {
       setIsActive(true);
     };
 
-    recognitionRef.current.onend = function() {
+    recognitionRef.current.onend = function () {
       setIsActive(false);
     };
 
-    recognitionRef.current.onresult = async function(event) {
+    recognitionRef.current.onresult = async function (event) {
       const transcript = event.results[0][0].transcript;
 
       setText(transcript);
@@ -132,23 +133,17 @@ const TradewithAI = () => {
     window.speechSynthesis.speak(utterance);
   }
 
-
   // @kamal transaction code
 
   const [prompt, setPrompt] = useState("");
 
-  const {
-    isConnecting,
-    isConnected,
-    isDisconnected,
-    chainId,
-  } = useAccount();
+  const { isConnecting, isConnected, isDisconnected, chainId } = useAccount();
 
   console.log("Address >>", address);
 
   const generatePrompt = async () => {
     const result = await brian.extract({
-      prompt : text!,
+      prompt: text!,
     });
 
     console.log("Result >>>", result);
@@ -192,7 +187,6 @@ const TradewithAI = () => {
       }
     }
   };
-
 
   return (
     <div className="mt-12 px-4">
@@ -258,7 +252,7 @@ const TradewithAI = () => {
               </div>
             </form>
             <p>
-              <button
+              <Button
                 className={`w-full h-full uppercase font-semibold text-sm  ${
                   isActive
                     ? "text-white bg-red-500"
@@ -267,7 +261,7 @@ const TradewithAI = () => {
                 onClick={handleOnRecord}
               >
                 {isActive ? "Stop" : "Record"}
-              </button>
+              </Button>
             </p>
           </div>
         </div>
@@ -277,12 +271,12 @@ const TradewithAI = () => {
         <p className="mb-4">Spoken Text: {text}</p>
         <p>Translation: {translation}</p>
 
-        <button
+        <Button
           onClick={generatePrompt}
           className="border rounded-md px-2 py-1 mt-8"
         >
           Execute the transaction
-        </button>
+        </Button>
       </div>
     </div>
   );

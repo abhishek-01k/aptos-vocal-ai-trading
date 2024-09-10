@@ -2,6 +2,7 @@ import { client } from "@/lib/client";
 import Image from "next/image";
 import Link from "next/link";
 import ConnectButton from "./ConnectButton";
+import { WalletSelector } from "./WalletSelector";
 
 function Header() {
   return (
@@ -27,7 +28,8 @@ function Header() {
         </Link>
       </nav>
       <div className="flex items-center">
-        <ConnectButton />
+        {/* <ConnectButton /> */}
+        <WalletSelector />
         {/* <ConnectButton
           client={client}
           appMetadata={{

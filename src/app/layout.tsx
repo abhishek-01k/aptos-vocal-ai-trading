@@ -10,10 +10,9 @@ export const metadata: Metadata = {
   description: "Translate from any language and place trades onchain!",
 };
 
-
 import { Web3Modal } from "@/context/web3modal";
 import { ThirdwebProvider } from "thirdweb/react";
-
+import Provider from "./Provider";
 
 export default function RootLayout({
   children,
@@ -23,10 +22,12 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
-      <Web3Modal >
-        <Navbar />
-        {children}
-      </Web3Modal>
+        <Web3Modal>
+          <Provider>
+            <Navbar />
+            {children}
+          </Provider>
+        </Web3Modal>
       </body>
     </html>
   );
