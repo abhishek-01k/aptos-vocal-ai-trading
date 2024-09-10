@@ -4,13 +4,9 @@ import { useState, useEffect, useRef } from "react";
 import { default as languageCodesData } from "@/data/language-codes.json";
 import { default as countryCodesData } from "@/data/country-codes.json";
 import brian from "@/lib/brian";
-import { useWeb3ModalAccount } from "@web3modal/ethers/react";
 import React from "react";
-import { useAccount } from "wagmi";
-import { mainnet, sepolia } from "wagmi/chains";
-import { sendTransaction } from "@wagmi/core";
-import { config } from "@/context/web3modal";
 import { Button } from "./ui/button";
+import { useWallet } from "@aptos-labs/wallet-adapter-react";
 
 const languageCodes: Record<string, string> = languageCodesData;
 const countryCodes: Record<string, string> = countryCodesData;
@@ -20,13 +16,16 @@ const TradewithAI = () => {
 
   const [isActive, setIsActive] = useState<boolean>(false);
   const [text, setText] = useState<string>();
-  const [translation, setTranslation] = useState<string>();
+  const [translation, setTranslation] = useState<string>("");
   const [voices, setVoices] = useState<Array<SpeechSynthesisVoice>>();
   const [language, setLanguage] = useState<string>("pt-BR");
+  const [languageCode, setLanguageCode] = useState<string>("pt");
 
-  const { address } = useWeb3ModalAccount();
+  const { account } = useWallet();
 
   const isSpeechDetected = false;
+
+  console.log("language",language);
 
   const availableLanguages = Array.from(
     new Set(voices?.map(({ lang }) => lang))
@@ -92,32 +91,29 @@ const TradewithAI = () => {
 
       setText(transcript);
 
-      const results = await fetch("/api/translate", {
-        method: "POST",
-        body: JSON.stringify({
-          text: transcript,
-          language: "en",
-        }),
-      }).then((r) => r.json());
+      if(languageCode === "en") {
+        speak(transcript);
+      } else {
+        const results = await fetch("/api/translate", {
+          method: "POST",
+          body: JSON.stringify({
+            text: transcript,
+            language: "en",
+          }),
+        }).then((r) => r.json());
 
-      const translatedText = results.text;
-      setTranslation(translatedText);
+        const translatedText = results.text;
+        setTranslation(translatedText);
 
-      speak(translatedText);
+        speak(translatedText);
+    }
 
       // Extract parameters from the translated text and execute transaction
       const transactionParams = await brian.extract({
-        prompt: translatedText,
+        prompt: languageCode === "en" ? transcript : translation,
       });
 
-      if (transactionParams) {
-        const transactionResult = await brian.transact({
-          ...transactionParams,
-          ...address!,
-        });
-
-        console.log("Transaction Result:", transactionResult);
-      }
+      
     };
 
     recognitionRef.current.start();
@@ -135,59 +131,8 @@ const TradewithAI = () => {
 
   // @kamal transaction code
 
-  const [prompt, setPrompt] = useState("");
-
-  const { isConnecting, isConnected, isDisconnected, chainId } = useAccount();
-
-  console.log("Address >>", address);
-
-  const generatePrompt = async () => {
-    const result = await brian.extract({
-      prompt: text!,
-    });
-
-    console.log("Result >>>", result);
-
-    if (!isConnected) {
-      alert("Connect your wallet");
-      return;
-    }
-
-    if (result && address) {
-      const transactionResult = await brian.transact({
-        ...result,
-        address: address,
-        chainId: chainId ? `${chainId}` : `${mainnet.id}`,
-      });
-
-      console.log("Transaction Result:", transactionResult);
-
-      const { data } = transactionResult[0];
-      const { steps } = data;
-      if (steps) {
-        for (const step of steps) {
-          const { from, to, value, data } = step;
-
-          const tx = {
-            from: from,
-            to,
-            value: BigInt(value), // Default to "0" if value is not provided
-            data,
-          };
-          console.log("Tx >>", tx);
-
-          try {
-            const hash = await sendTransaction(config, tx);
-            console.log("Transaction Hash >>", hash);
-          } catch (error) {
-            console.error("Transaction Error >>", error);
-            break; // Stop further transactions if one fails
-          }
-        }
-      }
-    }
-  };
-
+  
+  
   return (
     <div className="mt-12 px-4">
       <div className="max-w-lg rounded-xl overflow-hidden mx-auto">
@@ -239,6 +184,7 @@ const TradewithAI = () => {
                   value={language}
                   onChange={(event) => {
                     setLanguage(event.currentTarget.value);
+                    setLanguageCode(event.currentTarget.value.split("-")[0]);
                   }}
                 >
                   {availableLanguages.map(({ lang, label }) => {
@@ -269,14 +215,14 @@ const TradewithAI = () => {
 
       <div className="max-w-lg mx-auto mt-12">
         <p className="mb-4">Spoken Text: {text}</p>
-        <p>Translation: {translation}</p>
+        {languageCode !== "en" && <p className="mb-4">Translation: {translation}</p>}
 
-        <Button
+        {/* <Button
           onClick={generatePrompt}
           className="border rounded-md px-2 py-1 mt-8"
         >
           Execute the transaction
-        </Button>
+        </Button> */}
       </div>
     </div>
   );
