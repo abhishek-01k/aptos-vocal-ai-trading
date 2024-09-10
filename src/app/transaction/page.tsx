@@ -7,8 +7,20 @@ import { mainnet, sepolia } from "wagmi/chains";
 import { sendTransaction } from "@wagmi/core";
 import { config } from "@/context/web3modal";
 
+// utilising the panorama dex aggregator 
+
+import Panora from "@panoraexchange/swap-sdk"
+
 const TransactionPage = () => {
   const [prompt, setPrompt] = useState("");
+
+  //Creating a new instance
+  const client = new Panora({
+    apiKey : process.env.NEXT_PUBLIC_APP_PANORA_API_KEY!,
+    });
+    
+
+    
 
   const {
     address,
