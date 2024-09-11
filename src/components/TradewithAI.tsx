@@ -7,12 +7,18 @@ import brian from "@/lib/brian";
 import React from "react";
 import { Button } from "./ui/button";
 import { useWallet } from "@aptos-labs/wallet-adapter-react";
+import { default as tokenlist } from "@/config/token-list.json";
+import Panora from "@panoraexchange/swap-sdk"
 
 const languageCodes: Record<string, string> = languageCodesData;
 const countryCodes: Record<string, string> = countryCodesData;
 
 const TradewithAI = () => {
   const recognitionRef = useRef<SpeechRecognition>();
+
+  const client = new Panora({
+    apiKey : process.env.NEXT_PUBLIC_APP_PANORA_API_KEY!,
+    });
 
   const [isActive, setIsActive] = useState<boolean>(false);
   const [text, setText] = useState<string>();
@@ -65,6 +71,48 @@ const TradewithAI = () => {
     }
   }, []);
 
+  const privateKey = process.env.NEXT_PUBLIC_ADMIN_PK as string;
+
+  type PanoraSwapParams = {
+    chain?: string;
+    token1: string;
+    token2: string;
+    address: string;
+    amount: number;
+  };
+
+  async function handleSwap(panoraswap : PanoraSwapParams) {
+
+    const { chain, token1, token2, address, amount } = panoraswap;
+
+    // Helper function to match token
+    const findToken = (tokenName : string) => tokenlist.find(
+      (token) => token.name.toLowerCase().includes(tokenName) || token.symbol.toLowerCase() === tokenName
+    );
+  
+    // Find the fromToken and toToken based on user command
+    const fromToken = findToken(token1); // Assuming the first token mentioned is after 'swap'
+    const toToken = findToken(token2);   // Assuming the second token mentioned is after 'to'
+  
+    if (fromToken && toToken) {
+      try {
+        // Execute Panora swap function with the matched tokens
+        const result = await client.ExactInSwap({
+          "fromTokenAddress": fromToken.tokenAddress,
+          "toTokenAddress": toToken.tokenAddress,
+          "fromTokenAmount": amount.toString(), // Amount to swap (example)
+          "toWalletAddress": address, // User's wallet address
+        }, privateKey );
+        console.log("Swap result:", result);
+      } catch (error) {
+        console.error("Error executing swap:", error);
+      }
+    } else {
+      console.error("One or both tokens not found in the token list.");
+    }
+  }
+  
+
   function handleOnRecord() {
     if (isActive) {
       recognitionRef.current?.stop();
@@ -112,6 +160,13 @@ const TradewithAI = () => {
       const transactionParams = await brian.extract({
         prompt: languageCode === "en" ? transcript : translation,
       });
+
+      const { action } = transactionParams.completion[0];
+
+      if(transactionParams !== null && action === "swap") {
+        handleSwap(transactionParams.completion[0]);
+      }
+      console.log("transactionParams", transactionParams);
 
       
     };

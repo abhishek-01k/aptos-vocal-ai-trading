@@ -19,7 +19,7 @@ function Header() {
           }}
         />
         <span className="ml-3 text-xl font-bold text-gray-700">
-          Vocal Trading with AI
+          AptosDefi-with-Siri
         </span>
       </div>
       <nav className="hidden md:flex space-x-6">
@@ -28,15 +28,7 @@ function Header() {
         </Link>
       </nav>
       <div className="flex items-center">
-        {/* <ConnectButton /> */}
         <WalletSelector />
-        {/* <ConnectButton
-          client={client}
-          appMetadata={{
-            name: "Vocal Trading with AI",
-            url: "https://vocal-trading-with-ai.vercel.app/",
-          }}
-        /> */}
       </div>
       <div className="md:hidden">
         {/* Mobile menu button */}
