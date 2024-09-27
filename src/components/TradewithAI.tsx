@@ -6,9 +6,10 @@ import { default as countryCodesData } from "@/data/country-codes.json";
 import brian from "@/lib/brian";
 import React from "react";
 import { Button } from "./ui/button";
-import { useWallet } from "@aptos-labs/wallet-adapter-react";
+import { InputTransactionData, useWallet } from "@aptos-labs/wallet-adapter-react";
 import { default as tokenlist } from "@/config/token-list.json";
 import Panora from "@panoraexchange/swap-sdk"
+import { aptosClient } from "@/config/aptosConnector.config";
 
 const languageCodes: Record<string, string> = languageCodesData;
 const countryCodes: Record<string, string> = countryCodesData;
@@ -17,8 +18,8 @@ const TradewithAI = () => {
   const recognitionRef = useRef<SpeechRecognition>();
 
   const client = new Panora({
-    apiKey : process.env.NEXT_PUBLIC_APP_PANORA_API_KEY!,
-    });
+    apiKey: process.env.NEXT_PUBLIC_APP_PANORA_API_KEY!,
+  });
 
   const [isActive, setIsActive] = useState<boolean>(false);
   const [text, setText] = useState<string>();
@@ -26,12 +27,15 @@ const TradewithAI = () => {
   const [voices, setVoices] = useState<Array<SpeechSynthesisVoice>>();
   const [language, setLanguage] = useState<string>("pt-BR");
   const [languageCode, setLanguageCode] = useState<string>("pt");
-
-  const { account } = useWallet();
+  const {
+    account,
+    network,
+    signAndSubmitTransaction,
+  } = useWallet();
 
   const isSpeechDetected = false;
 
-  console.log("language",language);
+  console.log("language", language);
 
   const availableLanguages = Array.from(
     new Set(voices?.map(({ lang }) => lang))
@@ -81,19 +85,19 @@ const TradewithAI = () => {
     amount: number;
   };
 
-  async function handleSwap(panoraswap : PanoraSwapParams) {
+  async function handleSwap(panoraswap: PanoraSwapParams) {
 
     const { chain, token1, token2, address, amount } = panoraswap;
 
     // Helper function to match token
-    const findToken = (tokenName : string) => tokenlist.find(
+    const findToken = (tokenName: string) => tokenlist.find(
       (token) => token.name.toLowerCase().includes(tokenName) || token.symbol.toLowerCase() === tokenName
     );
-  
+
     // Find the fromToken and toToken based on user command
     const fromToken = findToken(token1); // Assuming the first token mentioned is after 'swap'
     const toToken = findToken(token2);   // Assuming the second token mentioned is after 'to'
-  
+
     if (fromToken && toToken) {
       try {
         // Execute Panora swap function with the matched tokens
@@ -102,7 +106,7 @@ const TradewithAI = () => {
           "toTokenAddress": toToken.tokenAddress,
           "fromTokenAmount": amount.toString(), // Amount to swap (example)
           "toWalletAddress": address, // User's wallet address
-        }, privateKey );
+        }, privateKey);
         console.log("Swap result:", result);
       } catch (error) {
         console.error("Error executing swap:", error);
@@ -111,7 +115,7 @@ const TradewithAI = () => {
       console.error("One or both tokens not found in the token list.");
     }
   }
-  
+
 
   function handleOnRecord() {
     if (isActive) {
@@ -139,7 +143,7 @@ const TradewithAI = () => {
 
       setText(transcript);
 
-      if(languageCode === "en") {
+      if (languageCode === "en") {
         speak(transcript);
       } else {
         const results = await fetch("/api/translate", {
@@ -154,7 +158,7 @@ const TradewithAI = () => {
         setTranslation(translatedText);
 
         speak(translatedText);
-    }
+      }
 
       // Extract parameters from the translated text and execute transaction
       const transactionParams = await brian.extract({
@@ -163,12 +167,12 @@ const TradewithAI = () => {
 
       const { action } = transactionParams.completion[0];
 
-      if(transactionParams !== null && action === "swap") {
+      if (transactionParams !== null && action === "swap") {
         handleSwap(transactionParams.completion[0]);
       }
       console.log("transactionParams", transactionParams);
 
-      
+
     };
 
     recognitionRef.current.start();
@@ -186,8 +190,29 @@ const TradewithAI = () => {
 
   // @kamal transaction code
 
-  
-  
+
+
+  // @abhishek This transaction is done for testnet amnis deposit and stake.
+  const handleAmenisSwap = async () => {
+    if (!account) return;
+    const transaction: InputTransactionData = {
+      data: {
+        function: "0xb8188ed9a1b56a11344aab853f708ead152484081c3b5ec081c38646500c42d7::router::deposit_and_stake_entry",
+        functionArguments: [30000000, account?.address], // 1 is in Octas
+      },
+    };
+    try {
+      const response = await signAndSubmitTransaction(transaction);
+      await aptosClient(network).waitForTransaction({
+        transactionHash: response.hash,
+      });
+      alert(`Success. Your transaction hash: ${response.hash}`)
+    } catch (error) {
+      console.error(error);
+    }
+  }
+
+
   return (
     <div className="mt-12 px-4">
       <div className="max-w-lg rounded-xl overflow-hidden mx-auto">
@@ -204,18 +229,16 @@ const TradewithAI = () => {
         <div className="bg-zinc-800 p-4 border-b-4 border-zinc-950">
           <p className="flex items-center gap-3">
             <span
-              className={`block rounded-full w-5 h-5 flex-shrink-0 flex-grow-0 ${
-                isActive ? "bg-red-500" : "bg-red-900"
-              } `}
+              className={`block rounded-full w-5 h-5 flex-shrink-0 flex-grow-0 ${isActive ? "bg-red-500" : "bg-red-900"
+                } `}
             >
               <span className="sr-only">
                 {isActive ? "Actively recording" : "Not actively recording"}
               </span>
             </span>
             <span
-              className={`block rounded w-full h-5 flex-grow-1 ${
-                isSpeechDetected ? "bg-green-500" : "bg-green-900"
-              }`}
+              className={`block rounded w-full h-5 flex-grow-1 ${isSpeechDetected ? "bg-green-500" : "bg-green-900"
+                }`}
             >
               <span className="sr-only">
                 {isSpeechDetected
@@ -254,11 +277,10 @@ const TradewithAI = () => {
             </form>
             <p>
               <Button
-                className={`w-full h-full uppercase font-semibold text-sm  ${
-                  isActive
-                    ? "text-white bg-red-500"
-                    : "text-zinc-400 bg-zinc-900"
-                } color-white py-3 rounded-sm`}
+                className={`w-full h-full uppercase font-semibold text-sm  ${isActive
+                  ? "text-white bg-red-500"
+                  : "text-zinc-400 bg-zinc-900"
+                  } color-white py-3 rounded-sm`}
                 onClick={handleOnRecord}
               >
                 {isActive ? "Stop" : "Record"}
@@ -271,6 +293,11 @@ const TradewithAI = () => {
       <div className="max-w-lg mx-auto mt-12">
         <p className="mb-4">Spoken Text: {text}</p>
         {languageCode !== "en" && <p className="mb-4">Translation: {translation}</p>}
+
+
+        <Button onClick={handleAmenisSwap}>
+          Amenis Swap
+        </Button>
 
         {/* <Button
           onClick={generatePrompt}
