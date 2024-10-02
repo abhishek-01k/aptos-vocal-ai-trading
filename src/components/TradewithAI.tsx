@@ -27,6 +27,7 @@ const TradewithAI = () => {
   const [language, setLanguage] = useState<string>("pt-BR");
   const [languageCode, setLanguageCode] = useState<string>("pt");
 
+
   const { account } = useWallet();
 
   const isSpeechDetected = false;

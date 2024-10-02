@@ -9,10 +9,10 @@ function Header() {
     <header className="flex items-center justify-between w-full py-4 px-6 bg-transparent shadow-md text-white">
       <div className="flex items-center">
         <Image
-          src="/logo"
-          alt="LOGO"
-          width={50}
-          height={50}
+          src="/aptosgreen"
+          alt="aptosdefi logo"
+          width={100}
+          height={100}
           className="w-12 h-12"
           style={{
             filter: "drop-shadow(0px 0px 24px #a726a9a8)",
