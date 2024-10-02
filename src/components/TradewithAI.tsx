@@ -10,6 +10,7 @@ import { InputTransactionData, useWallet } from "@aptos-labs/wallet-adapter-reac
 import { default as tokenlist } from "@/config/token-list.json";
 import Panora from "@panoraexchange/swap-sdk"
 import { aptosClient } from "@/config/aptosConnector.config";
+import { protocolMappings } from "@/lib/protocol-mapping";
 
 const languageCodes: Record<string, string> = languageCodesData;
 const countryCodes: Record<string, string> = countryCodesData;
@@ -77,6 +78,42 @@ const TradewithAI = () => {
 
   const privateKey = process.env.NEXT_PUBLIC_ADMIN_PK as string;
 
+    // @abhishek Helper function to find the correct function and arguments from the protocol mapping
+    const findFunctionFromPrompt = (prompt: string) => {
+      for (const [protocol, functions] of Object.entries(protocolMappings)) {
+        if (prompt.toLowerCase().includes(protocol.toLowerCase())) {
+          return functions.find((fn) => prompt.toLowerCase().includes(fn.functionName));
+        }
+      }
+      return null;
+    };
+
+
+    async function handleTransaction(prompt: string) {
+      const functionDetails = findFunctionFromPrompt(prompt);
+  
+      if (functionDetails) {
+        const transaction: InputTransactionData = {
+          data: {
+            function: functionDetails.functionFullPath,
+            type_arguments: functionDetails.typeArgs,
+            arguments: functionDetails.args,
+          },
+        };
+        try {
+          const response = await signAndSubmitTransaction(transaction);
+          await aptosClient(network).waitForTransaction({
+            transactionHash: response.hash,
+          });
+          alert(`Success. Your transaction hash: ${response.hash}`);
+        } catch (error) {
+          console.error("Transaction error:", error);
+        }
+      } else {
+        console.error("Function not found for the given prompt.");
+      }
+    }
+    
   type PanoraSwapParams = {
     chain?: string;
     token1: string;
