@@ -11,6 +11,11 @@ import { default as tokenlist } from "@/config/token-list.json";
 import Panora from "@panoraexchange/swap-sdk"
 import { aptosClient } from "@/config/aptosConnector.config";
 import { protocolMappings } from "@/lib/protocol-mapping";
+import { ThalaswapRouter } from "@thalalabs/router-sdk";
+import { Network } from "@aptos-labs/ts-sdk";
+import { handleGetThalaQuote } from "../../helpers/thalaSwap";
+import { SDK, convertValueToDecimal } from '@pontem/liquidswap-sdk';
+import { handleGetLiquidQuote } from "../../helpers/liquidSwap";
 
 const languageCodes: Record<string, string> = languageCodesData;
 const countryCodes: Record<string, string> = countryCodesData;
@@ -78,42 +83,42 @@ const TradewithAI = () => {
 
   const privateKey = process.env.NEXT_PUBLIC_ADMIN_PK as string;
 
-    // @abhishek Helper function to find the correct function and arguments from the protocol mapping
-    const findFunctionFromPrompt = (prompt: string) => {
-      for (const [protocol, functions] of Object.entries(protocolMappings)) {
-        if (prompt.toLowerCase().includes(protocol.toLowerCase())) {
-          return functions.find((fn) => prompt.toLowerCase().includes(fn.functionName));
-        }
-      }
-      return null;
-    };
-
-
-    async function handleTransaction(prompt: string) {
-      const functionDetails = findFunctionFromPrompt(prompt);
-  
-      if (functionDetails) {
-        const transaction: InputTransactionData = {
-          data: {
-            function: functionDetails.functionFullPath,
-            type_arguments: functionDetails.typeArgs,
-            arguments: functionDetails.args,
-          },
-        };
-        try {
-          const response = await signAndSubmitTransaction(transaction);
-          await aptosClient(network).waitForTransaction({
-            transactionHash: response.hash,
-          });
-          alert(`Success. Your transaction hash: ${response.hash}`);
-        } catch (error) {
-          console.error("Transaction error:", error);
-        }
-      } else {
-        console.error("Function not found for the given prompt.");
+  // @abhishek Helper function to find the correct function and arguments from the protocol mapping
+  const findFunctionFromPrompt = (prompt: string) => {
+    for (const [protocol, functions] of Object.entries(protocolMappings)) {
+      if (prompt.toLowerCase().includes(protocol.toLowerCase())) {
+        return functions.find((fn) => prompt.toLowerCase().includes(fn.functionName));
       }
     }
-    
+    return null;
+  };
+
+
+  async function handleTransaction(prompt: string) {
+    const functionDetails = findFunctionFromPrompt(prompt);
+
+    if (functionDetails) {
+      const transaction: InputTransactionData = {
+        data: {
+          function: functionDetails.functionFullPath,
+          type_arguments: functionDetails.typeArgs,
+          arguments: functionDetails.args,
+        },
+      };
+      try {
+        const response = await signAndSubmitTransaction(transaction);
+        await aptosClient(network).waitForTransaction({
+          transactionHash: response.hash,
+        });
+        alert(`Success. Your transaction hash: ${response.hash}`);
+      } catch (error) {
+        console.error("Transaction error:", error);
+      }
+    } else {
+      console.error("Function not found for the given prompt.");
+    }
+  }
+
   type PanoraSwapParams = {
     chain?: string;
     token1: string;
@@ -232,12 +237,28 @@ const TradewithAI = () => {
   // @abhishek This transaction is done for testnet amnis deposit and stake.
   const handleAmenisSwap = async () => {
     if (!account) return;
+    // const transaction: InputTransactionData = {
+    //   data: {
+    //     function: "0xb8188ed9a1b56a11344aab853f708ead152484081c3b5ec081c38646500c42d7::router::deposit_and_stake_entry",
+    //     functionArguments: [30000000, account?.address], // 1 is in Octas
+    //   },
+    // };
     const transaction: InputTransactionData = {
       data: {
-        function: "0xb8188ed9a1b56a11344aab853f708ead152484081c3b5ec081c38646500c42d7::router::deposit_and_stake_entry",
-        functionArguments: [30000000, account?.address], // 1 is in Octas
+        // type: 'entry_function_payload',
+        function: '0x190d44266241744264b964a37b8f09863167a12d3e70cda39376cfb4e3561e12::scripts_v2::swap_unchecked',
+        typeArguments: [
+          '0x1::aptos_coin::AptosCoin',
+          '0xcc8a89c8dce9693d354449f1f73e60e14e347417854f029db5bc8e7454008abb::coin::T',
+          '0x190d44266241744264b964a37b8f09863167a12d3e70cda39376cfb4e3561e12::curves::Stable'
+        ],
+        functionArguments: ['1000000', '174381']
       },
     };
+
+
+
+
     try {
       const response = await signAndSubmitTransaction(transaction);
       await aptosClient(network).waitForTransaction({
@@ -246,6 +267,141 @@ const TradewithAI = () => {
       alert(`Success. Your transaction hash: ${response.hash}`)
     } catch (error) {
       console.error(error);
+    }
+  }
+
+  // Thala Swap Quote and Swap Functions
+  const router = new ThalaswapRouter(
+    Network.MAINNET,
+    "https://fullnode.mainnet.aptoslabs.com/v1",
+    "0x48271d39d0b05bd6efca2278f22277d6fcc375504f9839fd73f74ace240861af",
+    "0x60955b957956d79bc80b096d3e41bad525dd400d8ce957cdeb05719ed1e4fc26"
+  );
+
+
+  const getThalaSwapQuote = async () => {
+    const fromToken = "0x1::aptos_coin::AptosCoin";
+    const toToken = "0xf22bede237a07e121b56d91a491eb7bcdfd1f5907926a9e58338f964a01b17fa::asset::USDC";
+    const amountIn = 0.01;
+    const quote = await handleGetThalaQuote({
+      router,
+      fromToken,
+      toToken,
+      amountIn
+    })
+
+    if (!quote) return null
+
+    if (quote) {
+      console.log("Quote route: ", quote);
+      const amountOut = quote?.amountOut;
+      console.log("Amount Out: ", amountOut);
+      return quote
+    }
+  }
+
+
+  const thalaSwap = async () => {
+    const route = await getThalaSwapQuote();
+    if (!route) return
+
+    try {
+      const transactionPayload = router.encodeRoute(route!, 0.5);
+      if (!transactionPayload) return;
+      const response = await signAndSubmitTransaction({
+        data: transactionPayload
+      });
+      await aptosClient(network).waitForTransaction({
+        transactionHash: response.hash,
+      });
+      alert(`Success. Your transaction hash: ${response.hash}`)
+    } catch (error) {
+      console.log("Error in swapping >>>", error);
+      return
+    }
+  }
+
+
+  // Liquid Swap Quote and Swap
+  const liquidSwapSDK = new SDK({
+    nodeUrl: 'https://fullnode.mainnet.aptoslabs.com/v1', // Node URL, required
+    /**
+      networkOptions is optional
+  
+      networkOptions: {
+        nativeToken: '0x1::aptos_coin::AptosCoin', - Type of Native network token
+        modules: {
+          Scripts:
+            '0x190d44266241744264b964a37b8f09863167a12d3e70cda39376cfb4e3561e12::scripts_v2',  - This module is used for Swap
+          CoinInfo: '0x1::coin::CoinInfo', - Type of base CoinInfo module
+          CoinStore: '0x1::coin::CoinStore', - Type of base CoinStore module
+        },
+        resourceAccount: '0x05a97986a9d031c4567e15b797be516910cfcb4156312482efc6a19c0a30c948',
+        moduleAccount: '0x190d44266241744264b964a37b8f09863167a12d3e70cda39376cfb4e3561e12',
+        moduleAccountV05: '0x163df34fccbf003ce219d3f1d9e70d140b60622cb9dd47599c25fb2f797ba6e',
+        resourceAccountV05: '0x61d2c22a6cb7831bee0f48363b0eec92369357aece0d1142062f7d5d85c7bef8'
+      }
+    */
+  })
+
+  const getLiquidSwapQuote = async () => {
+    const fromToken = "0x1::aptos_coin::AptosCoin";
+    const toToken = "0xf22bede237a07e121b56d91a491eb7bcdfd1f5907926a9e58338f964a01b17fa::asset::USDC";
+    const amountIn = 0.1;
+
+    const amountOut = await handleGetLiquidQuote({
+      sdk: liquidSwapSDK,
+      fromToken,
+      toToken,
+      amountIn
+    })
+
+    if (!amountOut) return null
+
+    if (amountOut) {
+      console.log("Amount Out: ", amountOut);
+      return amountOut
+    }
+
+  }
+
+
+  const handleLiquidSwap = async () => {
+    const fromToken = "0x1::aptos_coin::AptosCoin";
+    const toToken = "0xf22bede237a07e121b56d91a491eb7bcdfd1f5907926a9e58338f964a01b17fa::asset::USDC";
+    const amountIn = 0.1;
+
+    try {
+      const amountOut = await getLiquidSwapQuote();
+      const txPayload = liquidSwapSDK.Swap.createSwapTransactionPayload({
+        fromToken: fromToken,
+        toToken: toToken,
+        fromAmount: convertValueToDecimal(amountIn, 8),
+        toAmount: Number(amountOut),
+        interactiveToken: 'from',
+        slippage: 0.005, // 0.5% (1 - 100%, 0 - 0%)
+        stableSwapType: 'high',
+        curveType: 'uncorrelated',
+        version: 0
+      })
+      console.log(txPayload);
+
+      const transaction: InputTransactionData = {
+        data: {
+          function: txPayload.function as `${string}::${string}::${string}`,
+          typeArguments: txPayload.type_arguments,
+          functionArguments: txPayload.arguments
+        },
+      }
+
+      const response = await signAndSubmitTransaction(transaction);
+      await aptosClient(network).waitForTransaction({
+        transactionHash: response.hash,
+      });
+      alert(`Success. Your transaction hash: ${response.hash}`)
+    } catch (error) {
+      console.log("Error in swapping using liquid swap", error);
+
     }
   }
 
@@ -331,10 +487,17 @@ const TradewithAI = () => {
         <p className="mb-4">Spoken Text: {text}</p>
         {languageCode !== "en" && <p className="mb-4">Translation: {translation}</p>}
 
-
-        <Button onClick={handleAmenisSwap}>
-          Amenis Swap
-        </Button>
+        <div className="flex gap-8">
+          <Button onClick={handleAmenisSwap}>
+            Amenis Swap
+          </Button>
+          <Button onClick={thalaSwap}>
+            Thala Swap
+          </Button>
+          <Button onClick={handleLiquidSwap}>
+            Liquid Swap
+          </Button>
+        </div>
 
         {/* <Button
           onClick={generatePrompt}

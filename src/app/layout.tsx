@@ -6,8 +6,8 @@ import Navbar from "@/components/Navbar";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "AI Vocal Trades",
-  description: "Translate from any language and place trades onchain!",
+  title: "Aptos Siri",
+  description: "DEFI solution based on Vocal Intents",
 };
 
 import Provider from "./Provider";
@@ -20,10 +20,10 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
-          <Provider>
-            <Navbar />
-            {children}
-          </Provider>
+        <Provider>
+          <Navbar />
+          {children}
+        </Provider>
       </body>
     </html>
   );

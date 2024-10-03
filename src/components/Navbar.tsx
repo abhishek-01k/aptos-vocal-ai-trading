@@ -3,13 +3,14 @@ import Image from "next/image";
 import Link from "next/link";
 import ConnectButton from "./ConnectButton";
 import { WalletSelector } from "./WalletSelector";
+import AptosGreen from '@/public/aptosgreen.png'
 
 function Header() {
   return (
     <header className="flex items-center justify-between w-full py-4 px-6 bg-transparent shadow-md text-white">
       <div className="flex items-center">
         <Image
-          src="/aptosgreen"
+          src={AptosGreen}
           alt="aptosdefi logo"
           width={100}
           height={100}
@@ -19,7 +20,7 @@ function Header() {
           }}
         />
         <span className="ml-3 text-xl font-bold text-gray-700">
-          AptosDefi-with-Siri
+          Aptos-Siri
         </span>
       </div>
       <nav className="hidden md:flex space-x-6">
@@ -35,7 +36,7 @@ function Header() {
         <button
           className="text-gray-700 hover:text-gray-900 focus:outline-none focus:text-gray-900"
           aria-label="Toggle menu"
-          // Implement the menu toggle functionality here
+        // Implement the menu toggle functionality here
         >
           <svg
             className="w-6 h-6"
