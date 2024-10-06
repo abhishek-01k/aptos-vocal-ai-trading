@@ -2030,7 +2030,7 @@ __metadata:
     autoprefixer: "npm:^10.0.1"
     class-variance-authority: "npm:^0.7.0"
     clsx: "npm:^2.1.1"
-    echelon-sdk-aptosmanager: "npm:^1.1.0"
+    echelon-sdk-aptosmanager: "npm:^1.1.2"
     eslint: "npm:^8"
     eslint-config-next: "npm:14.1.0"
     ethers: "npm:^6.13.2"
@@ -2934,13 +2934,13 @@ __metadata:
   languageName: node
   linkType: hard
 
-"echelon-sdk-aptosmanager@npm:^1.1.0":
-  version: 1.1.0
-  resolution: "echelon-sdk-aptosmanager@npm:1.1.0"
+"echelon-sdk-aptosmanager@npm:^1.1.2":
+  version: 1.1.2
+  resolution: "echelon-sdk-aptosmanager@npm:1.1.2"
   dependencies:
     "@aptos-labs/ts-sdk": "npm:^1.22.2"
     "@thalalabs/surf": "npm:^1.7.1"
-  checksum: 10c0/713a5f84006a438ae0bf5a9dbbf870176bb05355c6036d21a36a61f38b61a47b1cb68316882a00ffcdfafd6d88bcfebcb3a67c70d1a198390fd321992b33a6aa
+  checksum: 10c0/bf835bf2ad4f57fb13c342035fee77b09a7c68e0308a43fefcfbc2699bb506691473f80b1a2b265f0badf8f324d274adb724ee6cc038b92e036816d941647d45
   languageName: node
   linkType: hard
 

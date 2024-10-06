@@ -131,14 +131,16 @@ const TradewithAI = () => {
     amount: number;
   };
 
+  // Helper function to match token
+  const findToken = (tokenName: string) => tokenlist.find(
+    (token) => token.name.toLowerCase().includes(tokenName) || token.symbol.toLowerCase() === tokenName
+  );
+
   async function handleSwap(panoraswap: PanoraSwapParams) {
 
     const { chain, token1, token2, address, amount } = panoraswap;
 
-    // Helper function to match token
-    const findToken = (tokenName: string) => tokenlist.find(
-      (token) => token.name.toLowerCase().includes(tokenName) || token.symbol.toLowerCase() === tokenName
-    );
+
 
     // Find the fromToken and toToken based on user command
     const fromToken = findToken(token1); // Assuming the first token mentioned is after 'swap'
@@ -375,15 +377,17 @@ const TradewithAI = () => {
     const toToken = "0xf22bede237a07e121b56d91a491eb7bcdfd1f5907926a9e58338f964a01b17fa::asset::USDC";
     const amountIn = 0.1;
 
+    const tokenData = tokenlist.find((token) => token.tokenAddress.toLowerCase() === fromToken.toLowerCase())
+
     try {
       const amountOut = await getLiquidSwapQuote();
       const txPayload = liquidSwapSDK.Swap.createSwapTransactionPayload({
         fromToken: fromToken,
         toToken: toToken,
-        fromAmount: convertValueToDecimal(amountIn, 8),
+        fromAmount: convertValueToDecimal(amountIn, tokenData?.decimals),
         toAmount: Number(amountOut),
         interactiveToken: 'from',
-        slippage: 0.005, // 0.5% (1 - 100%, 0 - 0%)
+        slippage: 0.005,
         stableSwapType: 'high',
         curveType: 'uncorrelated',
         version: 0
@@ -420,40 +424,23 @@ const TradewithAI = () => {
 
   console.log("clientEchelon >>>>", clientEchelon);
 
-  const handleEchelonBorrow = async () => {
+  const handleEchelonSupply = async () => {
+
     try {
       if (!account) return
-      const markets = await clientEchelon.getAllMarkets();
-      console.log("markets >>>", markets);
 
-      const market = markets[0]; // use the first market as an example
+      const supplyToken = "0x1::aptos_coin::AptosCoin";
+      const supplyingAmount = 0.1;
 
+      const tokenData = tokenlist.find((token) => token.tokenAddress.toLowerCase() === supplyToken.toLowerCase())
 
-      // Create the market mapping
-    const marketMapping = await clientEchelon.createMarketMapping();
-
-    console.log("Market Mapping >>>", marketMapping);
-
-    // Now you can easily get the market address for a specific token
-    const zusdcMarket = marketMapping['0x1::aptos_coin::AptosCoin'];
-    console.log("ZUSDC Market >>>", zusdcMarket);
-
-    const coin2 = await clientEchelon.getMarketCoin(zusdcMarket);
-    console.log("Coin >>>", coin2);
-
-
-
-      const coin = await clientEchelon.getMarketCoin(market);
-
-      console.log("Coin >>>", coin);
-
-      const accountBorrowable = await clientEchelon.getAccountBorrowable(account?.address, market);
-      console.log("accountBorrowable >>>", accountBorrowable);
+      const marketMapping = await clientEchelon.createMarketMapping();
+      const marketData = marketMapping[supplyToken];
 
       const transactionPayload = clientEchelon.createSupplyPayload(
-        coin,
-        market,
-        "106161"
+        supplyToken,
+        marketData,
+        convertValueToDecimal(supplyingAmount, tokenData?.decimals).toString()
       );
 
       console.log("Payload >>>", transactionPayload);
@@ -467,9 +454,74 @@ const TradewithAI = () => {
       alert(`Success. Your transaction hash: ${response.hash}`)
 
     } catch (error) {
-      console.log("Error >>>", error);
+      console.log("Error in supplying >>>>", error);
 
     }
+
+  }
+
+  const handleEchelonBorrow = async () => {
+    try {
+      if (!account) return
+
+      const borrowToken = "0x1::aptos_coin::AptosCoin";
+      const marketMapping = await clientEchelon.createMarketMapping();
+      console.log("Market Mapping >>>", marketMapping);
+
+      const marketData = marketMapping[borrowToken];
+      console.log("marketData >>>", marketData);
+
+      const amountBorrowable = await clientEchelon.getAccountBorrowable(account.address, marketData)
+      console.log("User Can borrow this much amount >", amountBorrowable);
+
+      const transactionPayload = clientEchelon.createBorrowPayload(
+        borrowToken,
+        marketData,
+        amountBorrowable
+      );
+
+      console.log("Payload >>>", transactionPayload);
+
+      const response = await signAndSubmitTransaction({
+        data: transactionPayload
+      });
+      await aptosClient(network).waitForTransaction({
+        transactionHash: response.hash,
+      });
+      alert(`Success. Your transaction hash: ${response.hash}`)
+
+    } catch (error) {
+      console.log("Error in requesting borrow >>>", error);
+
+    }
+  }
+
+  const handleDisplayHealthFactor = async () => {
+    if (!account) return
+
+    try {
+      const borrowToken = "0x1::aptos_coin::AptosCoin";
+      const supplyingAmount = 0.1;
+      const tokenData = tokenlist.find((token) => token.tokenAddress.toLowerCase() === borrowToken.toLowerCase())
+
+      const marketMapping = await clientEchelon.createMarketMapping();
+      console.log("Market Mapping >>>", marketMapping);
+
+      const marketData = marketMapping[borrowToken];
+      console.log("marketData >>>", marketData);
+
+      const borrowHealthFactor = await clientEchelon.previewHealthFactorGivenSupply(
+        account.address,
+        marketData,
+        convertValueToDecimal(supplyingAmount, tokenData?.decimals).toString()
+      );
+      console.log("Borrow Health factor >>>", borrowHealthFactor);
+    } catch (error) {
+      console.log("Error in displaying health factor >>>", error);
+
+    }
+
+
   }
 
 
@@ -565,8 +617,14 @@ const TradewithAI = () => {
           <Button onClick={handleLiquidSwap}>
             Liquid Swap
           </Button>
+          <Button onClick={handleEchelonSupply}>
+            Echelon Supply
+          </Button>
           <Button onClick={handleEchelonBorrow}>
             Echelon Borrow
+          </Button>
+          <Button onClick={handleDisplayHealthFactor}>
+            Display Health Factor
           </Button>
         </div>
 
