@@ -31,6 +31,7 @@
     "@types/dom-speech-recognition": "^0.0.4",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
+    "echelon-sdk-aptosmanager": "^1.0.0",
     "ethers": "^6.13.2",
     "graphql": "^16.9.0",
     "graphql-request": "^7.1.0",
