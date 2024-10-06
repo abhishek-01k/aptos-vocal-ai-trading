@@ -431,6 +431,7 @@ const TradewithAI = () => {
 
       // Create the market mapping
     const marketMapping = await clientEchelon.createMarketMapping();
+
     console.log("Market Mapping >>>", marketMapping);
 
     // Now you can easily get the market address for a specific token
