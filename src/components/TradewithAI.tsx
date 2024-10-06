@@ -427,6 +427,21 @@ const TradewithAI = () => {
       console.log("markets >>>", markets);
 
       const market = markets[0]; // use the first market as an example
+
+
+      // Create the market mapping
+    const marketMapping = await clientEchelon.createMarketMapping();
+    console.log("Market Mapping >>>", marketMapping);
+
+    // Now you can easily get the market address for a specific token
+    const zusdcMarket = marketMapping['0x1::aptos_coin::AptosCoin'];
+    console.log("ZUSDC Market >>>", zusdcMarket);
+
+    const coin2 = await clientEchelon.getMarketCoin(zusdcMarket);
+    console.log("Coin >>>", coin2);
+
+
+
       const coin = await clientEchelon.getMarketCoin(market);
 
       console.log("Coin >>>", coin);
