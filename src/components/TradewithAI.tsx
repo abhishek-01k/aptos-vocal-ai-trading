@@ -16,6 +16,10 @@ import { Network } from "@aptos-labs/ts-sdk";
 import { handleGetThalaQuote } from "../../helpers/thalaSwap";
 import { SDK, convertValueToDecimal } from '@pontem/liquidswap-sdk';
 import { handleGetLiquidQuote } from "../../helpers/liquidSwap";
+import { Account, Aptos, AptosConfig } from "@aptos-labs/ts-sdk";
+
+import { EchelonClient } from 'echelon-sdk-aptosmanager';
+
 
 const languageCodes: Record<string, string> = languageCodesData;
 const countryCodes: Record<string, string> = countryCodesData;
@@ -405,6 +409,54 @@ const TradewithAI = () => {
     }
   }
 
+  const aptos = new Aptos(
+    new AptosConfig({
+      network: Network.MAINNET,
+      fullnode: "https://fullnode.mainnet.aptoslabs.com/v1",
+    })
+  );
+
+  const clientEchelon = new EchelonClient(aptos, "0xc6bc659f1649553c1a3fa05d9727433dc03843baac29473c817d06d39e7621ba");
+
+  console.log("clientEchelon >>>>", clientEchelon);
+
+  const handleEchelonBorrow = async () => {
+    try {
+      if (!account) return
+      const markets = await clientEchelon.getAllMarkets();
+      console.log("markets >>>", markets);
+
+      const market = markets[0]; // use the first market as an example
+      const coin = await clientEchelon.getMarketCoin(market);
+
+      console.log("Coin >>>", coin);
+
+      const accountBorrowable = await clientEchelon.getAccountBorrowable(account?.address, market);
+      console.log("accountBorrowable >>>", accountBorrowable);
+
+      const transactionPayload = clientEchelon.createSupplyPayload(
+        coin,
+        market,
+        "106161"
+      );
+
+      console.log("Payload >>>", transactionPayload);
+
+      const response = await signAndSubmitTransaction({
+        data: transactionPayload
+      });
+      await aptosClient(network).waitForTransaction({
+        transactionHash: response.hash,
+      });
+      alert(`Success. Your transaction hash: ${response.hash}`)
+
+    } catch (error) {
+      console.log("Error >>>", error);
+
+    }
+  }
+
+
 
   return (
     <div className="mt-12 px-4">
@@ -496,6 +548,9 @@ const TradewithAI = () => {
           </Button>
           <Button onClick={handleLiquidSwap}>
             Liquid Swap
+          </Button>
+          <Button onClick={handleEchelonBorrow}>
+            Echelon Borrow
           </Button>
         </div>
 
