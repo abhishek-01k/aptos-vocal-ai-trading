@@ -24,6 +24,8 @@ import { handleGetLiquidQuote } from "../../helpers/liquidSwap";
 import { Account, Aptos, AptosConfig } from "@aptos-labs/ts-sdk";
 import { EchelonClient } from 'echelon-sdk-aptosmanager';
 
+import { AptosClient, AptosAccount, CoinClient, Types } from 'aptos';
+
 const languageCodes: Record<string, string> = languageCodesData;
 const countryCodes: Record<string, string> = countryCodesData;
 
@@ -401,23 +403,63 @@ const TradewithAI = () => {
 
   }
 
+  async function registerCoinStore(account) {
+    const sender = account.accountAddress;
+
+    // Define the CoinType you want to register, for example, USDC
+    const coinType = "0x1::coin::USDC";
+
+    // Build the payload to call the `deposit` function, which will automatically register the CoinStore
+    const payload = {
+        type: "entry_function_payload",
+        function: "0x1::coin::deposit", // Use deposit to trigger registration if not already registered
+        type_arguments: [coinType], // The specific coin you're registering
+        arguments: [sender, 0], // Deposit 0 amount, which triggers the registration without transferring any coins
+    };
+
+    // Build the transaction
+    const transaction = await aptos.transaction.build.simple({
+        sender: sender,
+        payload: payload,
+    });
+
+    console.log("Transaction >>>", transaction);
+
+    // Sign and submit the transaction
+    const signedTransaction = await signAndSubmitTransaction(transaction);
+
+    // Submit the signed transaction
+    const submittedTransaction = await aptos.transaction.submit(signedTransaction);
+
+    console.log(`Transaction submitted with hash: ${submittedTransaction.hash}`);
+}
+
   const handleLiquidSwap = async ( liquidSwap: SwapParams) => {
     // const fromToken = "0x1::aptos_coin::AptosCoin";
     // const toToken = "0xf22bede237a07e121b56d91a491eb7bcdfd1f5907926a9e58338f964a01b17fa::asset::USDC";
     // const amountIn = 0.1;
+    const { token1, token2, address, amount } = liquidSwap;
 
-    const fromToken = liquidSwap.token1;
-    const toToken = liquidSwap.token2;
-    const amountIn = liquidSwap.amount;
 
-    const tokenData = tokenlist.find((token) => token.tokenAddress.toLowerCase() === fromToken.toLowerCase())
+      // Find token addresses based on symbols
+    const fromToken = tokenlist.find(token => token.symbol.toLowerCase() === token1.toLowerCase());
+    const toToken = tokenlist.find(token => token.symbol.toLowerCase() === token2.toLowerCase());
+
+    await registerCoinStore(account!);
+
+  
+    if (!fromToken || !toToken) {
+      console.error("One or both tokens not found in the token list");
+      return;
+    }
+
 
     try {
       const amountOut = await getLiquidSwapQuote();
       const txPayload = liquidSwapSDK.Swap.createSwapTransactionPayload({
-        fromToken: fromToken,
-        toToken: toToken,
-        fromAmount: convertValueToDecimal(amountIn, tokenData?.decimals),
+        fromToken: fromToken.tokenAddress,
+        toToken: toToken.tokenAddress,
+        fromAmount: convertValueToDecimal(amount, fromToken?.decimals),
         toAmount: Number(amountOut),
         interactiveToken: 'from',
         slippage: 0.005,
