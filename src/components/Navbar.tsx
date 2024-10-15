@@ -1,7 +1,6 @@
 import { client } from "@/lib/client";
 import Image from "next/image";
 import Link from "next/link";
-import ConnectButton from "./ConnectButton";
 import { WalletSelector } from "./WalletSelector";
 import AptosGreen from '@/public/aptosgreen.png'
 
