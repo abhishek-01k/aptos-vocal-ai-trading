@@ -135,43 +135,107 @@ const TradewithAI = () => {
     return `Translated: ${text}`;
   };
 
-  // @abhishek Helper function to find the correct function and arguments from the protocol mapping
-  const findFunctionFromPrompt = (prompt: string) => {
-    for (const [protocol, functions] of Object.entries(protocolMappings)) {
-      if (prompt.toLowerCase().includes(protocol.toLowerCase())) {
-        return functions.find((fn) => prompt.toLowerCase().includes(fn.functionName));
-      }
+  const findFunctionFromPrompt = (result: any) => {
+    if (!result || !result.completion || result.completion.length === 0) {
+      return null;
     }
+
+    const action = result.completion[0].action.toLowerCase();
+    const protocol = selectedProtocol.toLowerCase();
+
+    switch (protocol) {
+      case "thalaswap":
+      case "liquidswap":
+        if (action === "swap") {
+          return {
+            functionName: "swap",
+            protocol: protocol
+          };
+        }
+        break;
+      case "echelon":
+        if (action === "supply") {
+          return {
+            functionName: "supply",
+            protocol: "echelon"
+          };
+        } else if (action === "borrow") {
+          return {
+            functionName: "borrow",
+            protocol: "echelon"
+          };
+        }
+        break;
+      case "panora":
+        if (action === "swap") {
+          return {
+            functionName: "swap",
+            protocol: "panora"
+          };
+        }
+        break;
+    }
+
     return null;
   };
 
-  async function handleTransaction(prompt: string) {
-    const functionDetails = findFunctionFromPrompt(prompt);
+  const handleTransaction = async (result: any) => {
+    const functionDetails = findFunctionFromPrompt(result);
 
     if (functionDetails) {
-      const transaction: InputTransactionData = {
-        data: {
-          function: functionDetails.functionFullPath,
-          type_arguments: functionDetails.typeArgs,
-          arguments: functionDetails.args,
-        },
-      };
+      const { token1, token2, amount } = result.completion[0];
+
       try {
-        const response = await signAndSubmitTransaction(transaction);
-        await aptosClient(network).waitForTransaction({
-          transactionHash: response.hash,
-        });
-        alert(`Success. Your transaction hash: ${response.hash}`);
+        switch (functionDetails.protocol) {
+          case "thalaswap":
+            const txn = await thalaSwap(
+              {
+                token1: token1,
+                token2: token2,
+                address: account?.address || "",
+                amount: parseFloat(amount)
+              }
+            );
+            console.log("Thala Swap Transaction >>>", txn);
+            
+            break;
+          case "liquidswap":
+            await handleLiquidSwap(
+              {
+                token1: token1,
+                token2: token2,
+                address: account?.address || "",
+                amount: parseFloat(amount)
+              }
+            );
+            break;
+          case "echelon":
+            if (functionDetails.functionName === "supply") {
+              await handleEchelonSupply();
+            } else if (functionDetails.functionName === "borrow") {
+              await handleEchelonBorrow();
+            }
+            break;
+          case "panora":
+            await handlePanoraSwap({
+              token1: token1,
+              token2: token2,
+              address: account?.address || "",
+              amount: parseFloat(amount)
+            });
+            break;
+          default:
+            console.error("Unknown protocol or action");
+        }
       } catch (error) {
         console.error("Transaction error:", error);
       }
     } else {
       console.error("Function not found for the given prompt.");
     }
-  }
+  };
 
-  type PanoraSwapParams = {
-    chain?: string;
+  type SwapParams = {
     token1: string;
     token2: string;
     address: string;
@@ -183,10 +247,10 @@ const TradewithAI = () => {
     (token) => token.name.toLowerCase().includes(tokenName) || token.symbol.toLowerCase() === tokenName
   );
 
-  async function handlePanoraSwap(panoraswap: PanoraSwapParams) {
+  async function handlePanoraSwap(panoraswap: SwapParams) {
 
     const privateKey = process.env.NEXT_PUBLIC_ADMIN_PK as string;
-    const { chain, token1, token2, address, amount } = panoraswap;
+    const { token1, token2, address, amount } = panoraswap;
 
     // Find the fromToken and toToken based on user command
     const fromToken = findToken(token1); // Assuming the first token mentioned is after 'swap'
@@ -274,7 +338,7 @@ const TradewithAI = () => {
     }
   }
 
-  const thalaSwap = async () => {
+  const thalaSwap = async ( thalaswap: SwapParams) => {
     const route = await getThalaSwapQuote();
     if (!route) return
 
@@ -337,10 +401,14 @@ const TradewithAI = () => {
 
   }
 
-  const handleLiquidSwap = async () => {
-    const fromToken = "0x1::aptos_coin::AptosCoin";
-    const toToken = "0xf22bede237a07e121b56d91a491eb7bcdfd1f5907926a9e58338f964a01b17fa::asset::USDC";
-    const amountIn = 0.1;
+  const handleLiquidSwap = async ( liquidSwap: SwapParams) => {
+    // const fromToken = "0x1::aptos_coin::AptosCoin";
+    // const toToken = "0xf22bede237a07e121b56d91a491eb7bcdfd1f5907926a9e58338f964a01b17fa::asset::USDC";
+    // const amountIn = 0.1;
+
+    const fromToken = liquidSwap.token1;
+    const toToken = liquidSwap.token2;
+    const amountIn = liquidSwap.amount;
 
     const tokenData = tokenlist.find((token) => token.tokenAddress.toLowerCase() === fromToken.toLowerCase())
 
