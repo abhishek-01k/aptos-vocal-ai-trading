@@ -1,6 +1,6 @@
 # Aptos AI trading
 
-- "Trade Smartly on Aptos with just your Voice – In Any Language! and get the best routes for swap, cross-swap, and bridge operations on different chains."
+Bringing Aptos Defi on your fingertips , Now Trade Smartly on Aptos with just your Voice – In Any Language! and get the best routes for swap, lending-borrowing etc.
 
 This project utilizes solvers to build and execute transactions on behalf of the users.
 

@@ -405,34 +405,38 @@ const TradewithAI = () => {
 
   async function registerCoinStore(account) {
     const sender = account.accountAddress;
-
-    // Define the CoinType you want to register, for example, USDC
+    
     const coinType = "0x1::coin::USDC";
 
-    // Build the payload to call the `deposit` function, which will automatically register the CoinStore
+    // Build the payload to call the register function
     const payload = {
         type: "entry_function_payload",
-        function: "0x1::coin::deposit", // Use deposit to trigger registration if not already registered
+        function: "0x1::coin::register", // Calling the register function in the coin module
         type_arguments: [coinType], // The specific coin you're registering
-        arguments: [sender, 0], // Deposit 0 amount, which triggers the registration without transferring any coins
+        arguments: [], // No arguments required for the register function
     };
 
     // Build the transaction
-    const transaction = await aptos.transaction.build.simple({
-        sender: sender,
-        payload: payload,
-    });
+    // const transaction = await aptos.transaction.build.simple({
+    //     sender: sender,
+    //     data: payload,
+    // });
+
+    const transaction: InputTransactionData = {
+      data: {
+        function: "0x1::coin::register", // Calling the register function in the coin module
+        typeArguments: [coinType], // The specific coin you're registering
+        functionArguments: [], // No arguments required for the register function
+      },
+    };
 
     console.log("Transaction >>>", transaction);
 
-    // Sign and submit the transaction
+    // Sign the transaction
     const signedTransaction = await signAndSubmitTransaction(transaction);
+  }
 
-    // Submit the signed transaction
-    const submittedTransaction = await aptos.transaction.submit(signedTransaction);
 
-    console.log(`Transaction submitted with hash: ${submittedTransaction.hash}`);
-}
 
   const handleLiquidSwap = async ( liquidSwap: SwapParams) => {
     // const fromToken = "0x1::aptos_coin::AptosCoin";
@@ -601,11 +605,18 @@ const TradewithAI = () => {
 
   }
 
+  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-900 to-gray-800 flex items-center justify-center p-4">
       <Card className="w-full max-w-4xl mx-auto h-[700px] flex flex-col bg-gray-800 text-white shadow-xl">
         <CardHeader className="flex flex-row items-center justify-between px-6 py-4 bg-gray-700 rounded-t-xl">
-          <CardTitle className="text-2xl font-bold">AI Vocal Trades</CardTitle>
+          <CardTitle className="text-2xl font-bold">Aptos Siri</CardTitle>
           <div className="flex space-x-2">
             <Select value={language} onValueChange={setLanguage}>
               <SelectTrigger className="w-[180px] bg-gray-600">
@@ -672,6 +683,7 @@ const TradewithAI = () => {
               <Textarea
                 value={text}
                 onChange={(e) => setText(e.target.value)}
+                onKeyPress={handleKeyPress}
                 className="flex-grow text-base bg-gray-600 border-gray-500"
                 rows={3}
                 placeholder={`Type your command in ${language === "en-US" ? "English" : "your selected language"}...`}
@@ -680,6 +692,7 @@ const TradewithAI = () => {
               <Input
                 value={text}
                 onChange={(e) => setText(e.target.value)}
+                onKeyPress={handleKeyPress}
                 placeholder={`Type or speak your command...`}
                 className="flex-grow text-base bg-gray-600 border-gray-500"
               />
