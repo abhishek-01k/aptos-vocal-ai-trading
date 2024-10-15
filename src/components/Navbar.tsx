@@ -20,7 +20,7 @@ function Header() {
           }}
         />
         <span className="ml-3 text-xl font-bold text-gray-700">
-          Aptos-Siri
+          Aptos Vocal Ai Trading
         </span>
       </div>
       <nav className="hidden md:flex space-x-6">

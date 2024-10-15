@@ -616,7 +616,7 @@ const TradewithAI = () => {
     <div className="min-h-screen bg-gradient-to-b from-gray-900 to-gray-800 flex items-center justify-center p-4">
       <Card className="w-full max-w-4xl mx-auto h-[700px] flex flex-col bg-gray-800 text-white shadow-xl">
         <CardHeader className="flex flex-row items-center justify-between px-6 py-4 bg-gray-700 rounded-t-xl">
-          <CardTitle className="text-2xl font-bold">Aptos Siri</CardTitle>
+          <CardTitle className="text-2xl font-bold">Aptos Vocal Ai Trading</CardTitle>
           <div className="flex space-x-2">
             <Select value={language} onValueChange={setLanguage}>
               <SelectTrigger className="w-[180px] bg-gray-600">
@@ -683,7 +683,6 @@ const TradewithAI = () => {
               <Textarea
                 value={text}
                 onChange={(e) => setText(e.target.value)}
-                onKeyPress={handleKeyPress}
                 className="flex-grow text-base bg-gray-600 border-gray-500"
                 rows={3}
                 placeholder={`Type your command in ${language === "en-US" ? "English" : "your selected language"}...`}
@@ -692,7 +691,6 @@ const TradewithAI = () => {
               <Input
                 value={text}
                 onChange={(e) => setText(e.target.value)}
-                onKeyPress={handleKeyPress}
                 placeholder={`Type or speak your command...`}
                 className="flex-grow text-base bg-gray-600 border-gray-500"
               />
