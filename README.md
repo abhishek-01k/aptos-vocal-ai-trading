@@ -1,4 +1,4 @@
-# Aptos AI trading
+# Aptos Vocal AI trading
 
 Bringing Aptos Defi on your fingertips , Now Trade Smartly on Aptos with just your Voice – In Any Language! and get the best routes for swap, lending-borrowing etc.
 
