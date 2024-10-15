@@ -1,11 +1,16 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { Button } from "./ui/button";
+import { Input } from "./ui/input";
+import { Textarea } from "./ui/textarea";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "./ui/card";
+import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
+import { Mic, MicOff, PenSquare, Send, Play } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
+import brian from "@/lib/brian";
 import { default as languageCodesData } from "@/data/language-codes.json";
 import { default as countryCodesData } from "@/data/country-codes.json";
-import brian from "@/lib/brian";
-import React from "react";
-import { Button } from "./ui/button";
 import { InputTransactionData, useWallet } from "@aptos-labs/wallet-adapter-react";
 import { default as tokenlist } from "@/config/token-list.json";
 import Panora from "@panoraexchange/swap-sdk"
@@ -17,75 +22,118 @@ import { handleGetThalaQuote } from "../../helpers/thalaSwap";
 import { SDK, convertValueToDecimal } from '@pontem/liquidswap-sdk';
 import { handleGetLiquidQuote } from "../../helpers/liquidSwap";
 import { Account, Aptos, AptosConfig } from "@aptos-labs/ts-sdk";
-
 import { EchelonClient } from 'echelon-sdk-aptosmanager';
-
 
 const languageCodes: Record<string, string> = languageCodesData;
 const countryCodes: Record<string, string> = countryCodesData;
 
 const TradewithAI = () => {
-  const recognitionRef = useRef<SpeechRecognition>();
+  const [isListening, setIsListening] = useState(false);
+  const [text, setText] = useState("");
+  const [translation, setTranslation] = useState("");
+  const [language, setLanguage] = useState("en-US");
+  const [messages, setMessages] = useState<Array<{
+    role: "user" | "assistant";
+    content: string;
+    originalContent?: string;
+    canExecute?: boolean;
+    result?: any
+  }>>([]);
+  const [isEditing, setIsEditing] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const [selectedProtocol, setSelectedProtocol] = useState("thalaswap");
 
   const client = new Panora({
     apiKey: process.env.NEXT_PUBLIC_APP_PANORA_API_KEY!,
   });
 
-  const [isActive, setIsActive] = useState<boolean>(false);
-  const [text, setText] = useState<string>();
-  const [translation, setTranslation] = useState<string>("");
-  const [voices, setVoices] = useState<Array<SpeechSynthesisVoice>>();
-  const [language, setLanguage] = useState<string>("pt-BR");
-  const [languageCode, setLanguageCode] = useState<string>("pt");
   const {
     account,
     network,
     signAndSubmitTransaction,
   } = useWallet();
 
-  const isSpeechDetected = false;
+  useEffect(() => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    recognitionRef.current = new SpeechRecognition();
+    recognitionRef.current.continuous = false;
+    recognitionRef.current.lang = language;
 
-  console.log("language", language);
+    recognitionRef.current.onresult = async (event) => {
+      const transcript = event.results[0][0].transcript;
+      setText(transcript);
+      if (language !== "en-US") {
+        const translatedText = await translateText(transcript, "en-US");
+        setTranslation(translatedText);
+      }
+    };
 
-  const availableLanguages = Array.from(
-    new Set(voices?.map(({ lang }) => lang))
-  )
-    .map((lang) => {
-      const split = lang.split("-");
-      const languageCode: string = split[0];
-      const countryCode: string = split[1];
-      return {
-        lang,
-        label: languageCodes[languageCode] || lang,
-        dialect: countryCodes[countryCode],
-      };
-    })
-    .sort((a, b) => a.label.localeCompare(b.label));
-  const activeLanguage = availableLanguages.find(
-    ({ lang }) => language === lang
-  );
+    recognitionRef.current.onend = () => setIsListening(false);
 
-  const availableVoices = voices?.filter(({ lang }) => lang === language);
-  const activeVoice =
-    availableVoices?.find(({ name }) => name.includes("Google")) ||
-    availableVoices?.find(({ name }) => name.includes("Luciana")) ||
-    availableVoices?.[0];
+    return () => {
+      recognitionRef.current?.abort();
+    };
+  }, [language]);
 
   useEffect(() => {
-    const voices = window.speechSynthesis.getVoices();
-    if (Array.isArray(voices) && voices.length > 0) {
-      setVoices(voices);
-      return;
-    }
-    if ("onvoiceschanged" in window.speechSynthesis) {
-      window.speechSynthesis.onvoiceschanged = function () {
-        const voices = window.speechSynthesis.getVoices();
-        setVoices(voices);
-      };
-    }
-  }, []);
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
 
-  const privateKey = process.env.NEXT_PUBLIC_ADMIN_PK as string;
+  const toggleListening = () => {
+    if (isListening) {
+      recognitionRef.current?.stop();
+    } else {
+      recognitionRef.current?.start();
+      setIsListening(true);
+    }
+  };
+
+  const handleSend = async () => {
+    if (text.trim()) {
+      let messageToProcess = language === "en-US" ? text : translation;
+      
+      setMessages(prev => [...prev, {
+        role: "user",
+        content: messageToProcess,
+        originalContent: language !== "en-US" ? text : undefined,
+      }]);
+      setText("");
+      setTranslation("");
+      setIsEditing(false);
+
+      // Process the message with Brian
+      const result = await brian.extract({
+        prompt: messageToProcess,
+      });
+
+      // AI response
+      setTimeout(() => {
+        setMessages(prev => [...prev, {
+          role: "assistant",
+          content: `I've received your command: "${messageToProcess}". ${result ? "I can execute this transaction for you." : "I couldn't process this as a transaction."}`,
+          canExecute: !!result,
+          result: result
+        }]);
+      }, 1000);
+    }
+  };
+
+  const executeTransaction = async (messageIndex: number) => {
+
+    const extractedText = messages[messageIndex];
+    console.log(extractedText,"a")
+    // Implement your transaction execution logic here
+    console.log("Executing transaction for message:", messages[messageIndex]);
+    handleTransaction(extractedText.result)
+  };
+
+  // Implement this function to call your translation API
+  const translateText = async (text: string, targetLang: string): Promise<string> => {
+    // Replace this with your actual translation API call
+    console.log(`Translating: ${text} to ${targetLang}`);
+    return `Translated: ${text}`;
+  };
 
   // @abhishek Helper function to find the correct function and arguments from the protocol mapping
   const findFunctionFromPrompt = (prompt: string) => {
@@ -96,7 +144,6 @@ const TradewithAI = () => {
     }
     return null;
   };
-
 
   async function handleTransaction(prompt: string) {
     const functionDetails = findFunctionFromPrompt(prompt);
@@ -136,11 +183,10 @@ const TradewithAI = () => {
     (token) => token.name.toLowerCase().includes(tokenName) || token.symbol.toLowerCase() === tokenName
   );
 
-  async function handleSwap(panoraswap: PanoraSwapParams) {
+  async function handlePanoraSwap(panoraswap: PanoraSwapParams) {
 
+    const privateKey = process.env.NEXT_PUBLIC_ADMIN_PK as string;
     const { chain, token1, token2, address, amount } = panoraswap;
-
-
 
     // Find the fromToken and toToken based on user command
     const fromToken = findToken(token1); // Assuming the first token mentioned is after 'swap'
@@ -164,81 +210,7 @@ const TradewithAI = () => {
     }
   }
 
-
-  function handleOnRecord() {
-    if (isActive) {
-      recognitionRef.current?.stop();
-      setIsActive(false);
-      return;
-    }
-
-    speak(" ");
-
-    const SpeechRecognition =
-      window.SpeechRecognition || window.webkitSpeechRecognition;
-    recognitionRef.current = new SpeechRecognition();
-
-    recognitionRef.current.onstart = function () {
-      setIsActive(true);
-    };
-
-    recognitionRef.current.onend = function () {
-      setIsActive(false);
-    };
-
-    recognitionRef.current.onresult = async function (event) {
-      const transcript = event.results[0][0].transcript;
-
-      setText(transcript);
-
-      if (languageCode === "en") {
-        speak(transcript);
-      } else {
-        const results = await fetch("/api/translate", {
-          method: "POST",
-          body: JSON.stringify({
-            text: transcript,
-            language: "en",
-          }),
-        }).then((r) => r.json());
-
-        const translatedText = results.text;
-        setTranslation(translatedText);
-
-        speak(translatedText);
-      }
-
-      // Extract parameters from the translated text and execute transaction
-      const transactionParams = await brian.extract({
-        prompt: languageCode === "en" ? transcript : translation,
-      });
-
-      const { action } = transactionParams.completion[0];
-
-      if (transactionParams !== null && action === "swap") {
-        handleSwap(transactionParams.completion[0]);
-      }
-      console.log("transactionParams", transactionParams);
-
-
-    };
-
-    recognitionRef.current.start();
-  }
-
-  function speak(text: string) {
-    const utterance = new SpeechSynthesisUtterance(text);
-
-    if (activeVoice) {
-      utterance.voice = activeVoice;
-    }
-
-    window.speechSynthesis.speak(utterance);
-  }
-
   // @kamal transaction code
-
-
 
   // @abhishek This transaction is done for testnet amnis deposit and stake.
   const handleAmenisSwap = async () => {
@@ -262,9 +234,6 @@ const TradewithAI = () => {
       },
     };
 
-
-
-
     try {
       const response = await signAndSubmitTransaction(transaction);
       await aptosClient(network).waitForTransaction({
@@ -283,7 +252,6 @@ const TradewithAI = () => {
     "0x48271d39d0b05bd6efca2278f22277d6fcc375504f9839fd73f74ace240861af",
     "0x60955b957956d79bc80b096d3e41bad525dd400d8ce957cdeb05719ed1e4fc26"
   );
-
 
   const getThalaSwapQuote = async () => {
     const fromToken = "0x1::aptos_coin::AptosCoin";
@@ -306,7 +274,6 @@ const TradewithAI = () => {
     }
   }
 
-
   const thalaSwap = async () => {
     const route = await getThalaSwapQuote();
     if (!route) return
@@ -326,7 +293,6 @@ const TradewithAI = () => {
       return
     }
   }
-
 
   // Liquid Swap Quote and Swap
   const liquidSwapSDK = new SDK({
@@ -370,7 +336,6 @@ const TradewithAI = () => {
     }
 
   }
-
 
   const handleLiquidSwap = async () => {
     const fromToken = "0x1::aptos_coin::AptosCoin";
@@ -422,13 +387,14 @@ const TradewithAI = () => {
 
   const clientEchelon = new EchelonClient(aptos, "0xc6bc659f1649553c1a3fa05d9727433dc03843baac29473c817d06d39e7621ba");
 
-  console.log("clientEchelon >>>>", clientEchelon);
+  // console.log("clientEchelon >>>>", clientEchelon);
 
   const handleEchelonSupply = async () => {
 
     try {
       if (!account) return
 
+      // make the below 2 args dynamic
       const supplyToken = "0x1::aptos_coin::AptosCoin";
       const supplyingAmount = 0.1;
 
@@ -467,6 +433,8 @@ const TradewithAI = () => {
       const borrowToken = "0x1::aptos_coin::AptosCoin";
       const marketMapping = await clientEchelon.createMarketMapping();
       console.log("Market Mapping >>>", marketMapping);
+      // For Eg, 10 Aptos Supply |..........| 6 USDC Borrow -> 1.6 , 
+      // borrowable amount should be dynamic
 
       const marketData = marketMapping[borrowToken];
       console.log("marketData >>>", marketData);
@@ -521,120 +489,109 @@ const TradewithAI = () => {
 
     }
 
-
   }
 
-
-
   return (
-    <div className="mt-12 px-4">
-      <div className="max-w-lg rounded-xl overflow-hidden mx-auto">
-        <div className="bg-zinc-200 p-4 border-b-4 border-zinc-300">
-          <div className="bg-blue-200 rounded-lg p-2 border-2 border-blue-300">
-            <h2 className="text-center text-blue-400">AI Vocal Trades</h2>
-            <ul className="font-mono font-bold text-blue-900 uppercase px-4 py-2 border border-blue-800 rounded">
-              <li>&gt; Translation Mode: {activeLanguage?.label}</li>
-              <li>&gt; Dialect: {activeLanguage?.dialect}</li>
-            </ul>
+    <div className="min-h-screen bg-gradient-to-b from-gray-900 to-gray-800 flex items-center justify-center p-4">
+      <Card className="w-full max-w-4xl mx-auto h-[700px] flex flex-col bg-gray-800 text-white shadow-xl">
+        <CardHeader className="flex flex-row items-center justify-between px-6 py-4 bg-gray-700 rounded-t-xl">
+          <CardTitle className="text-2xl font-bold">AI Vocal Trades</CardTitle>
+          <div className="flex space-x-2">
+            <Select value={language} onValueChange={setLanguage}>
+              <SelectTrigger className="w-[180px] bg-gray-600">
+                <SelectValue placeholder="Select Language" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="en-US">English</SelectItem>
+                <SelectItem value="es-ES">Español</SelectItem>
+                <SelectItem value="fr-FR">Français</SelectItem>
+                <SelectItem value="de-DE">Deutsch</SelectItem>
+                <SelectItem value="it-IT">Italiano</SelectItem>
+                <SelectItem value="pt-BR">Português</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={selectedProtocol} onValueChange={setSelectedProtocol}>
+              <SelectTrigger className="w-[180px] bg-gray-600">
+                <SelectValue placeholder="Select Protocol" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="thalaswap">Thalaswap</SelectItem>
+                <SelectItem value="liquidswap">Liquidswap</SelectItem>
+                <SelectItem value="echelon">Echelon Market</SelectItem>
+                <SelectItem value="panora">Panora Exchange</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
-        </div>
-
-        <div className="bg-zinc-800 p-4 border-b-4 border-zinc-950">
-          <p className="flex items-center gap-3">
-            <span
-              className={`block rounded-full w-5 h-5 flex-shrink-0 flex-grow-0 ${isActive ? "bg-red-500" : "bg-red-900"
-                } `}
-            >
-              <span className="sr-only">
-                {isActive ? "Actively recording" : "Not actively recording"}
-              </span>
-            </span>
-            <span
-              className={`block rounded w-full h-5 flex-grow-1 ${isSpeechDetected ? "bg-green-500" : "bg-green-900"
-                }`}
-            >
-              <span className="sr-only">
-                {isSpeechDetected
-                  ? "Speech is being recorded"
-                  : "Speech is not being recorded"}
-              </span>
-            </span>
-          </p>
-        </div>
-
-        <div className="bg-zinc-800 p-4">
-          <div className="grid sm:grid-cols-2 gap-4 max-w-lg bg-zinc-200 rounded-lg p-5 mx-auto">
-            <form>
-              <div>
-                <label className="block text-zinc-500 text-[.6rem] uppercase font-bold mb-1">
-                  Language
-                </label>
-                <select
-                  className="w-full text-[.7rem] rounded-sm border-zinc-300 px-2 py-1 pr-7"
-                  name="language"
-                  value={language}
-                  onChange={(event) => {
-                    setLanguage(event.currentTarget.value);
-                    setLanguageCode(event.currentTarget.value.split("-")[0]);
-                  }}
-                >
-                  {availableLanguages.map(({ lang, label }) => {
-                    return (
-                      <option key={lang} value={lang}>
-                        {label} ({lang})
-                      </option>
-                    );
-                  })}
-                </select>
+        </CardHeader>
+        <CardContent className="flex-grow overflow-auto px-6 py-4 space-y-4">
+          {messages.map((message, index) => (
+            <div key={index} className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}>
+              <div className={`flex items-start max-w-[80%] ${message.role === "user" ? "flex-row-reverse" : ""}`}>
+                <Avatar className="w-10 h-10 mt-1">
+                  <AvatarFallback>{message.role === "user" ? "U" : "AI"}</AvatarFallback>
+                  {message.role === "assistant" && <AvatarImage src="/ai-avatar.png" alt="AI Assistant" />}
+                </Avatar>
+                <div className={`mx-2 p-3 rounded-lg ${message.role === "user" ? "bg-blue-600" : "bg-gray-700"}`}>
+                  <p className="text-sm">{message.content}</p>
+                  {message.originalContent && (
+                    <p className="text-xs mt-1 text-gray-400">Original: {message.originalContent}</p>
+                  )}
+                  {message.canExecute && (
+                    <Button onClick={() => executeTransaction(index)} className="mt-2" size="sm" variant="secondary">
+                      <Play className="mr-1 h-3 w-3" />
+                      Execute
+                    </Button>
+                  )}
+                </div>
               </div>
-            </form>
-            <p>
-              <Button
-                className={`w-full h-full uppercase font-semibold text-sm  ${isActive
-                  ? "text-white bg-red-500"
-                  : "text-zinc-400 bg-zinc-900"
-                  } color-white py-3 rounded-sm`}
-                onClick={handleOnRecord}
-              >
-                {isActive ? "Stop" : "Record"}
-              </Button>
-            </p>
+            </div>
+          ))}
+          <div ref={messagesEndRef} />
+        </CardContent>
+        <CardFooter className="p-4 bg-gray-700 rounded-b-xl">
+          <div className="flex w-full items-center space-x-2">
+            <Button
+              size="icon"
+              variant={isListening ? "destructive" : "secondary"}
+              onClick={toggleListening}
+              className="w-12 h-12 flex-shrink-0"
+            >
+              {isListening ? <MicOff className="h-6 w-6" /> : <Mic className="h-6 w-6" />}
+            </Button>
+            {isEditing ? (
+              <Textarea
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                className="flex-grow text-base bg-gray-600 border-gray-500"
+                rows={3}
+                placeholder={`Type your command in ${language === "en-US" ? "English" : "your selected language"}...`}
+              />
+            ) : (
+              <Input
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                placeholder={`Type or speak your command...`}
+                className="flex-grow text-base bg-gray-600 border-gray-500"
+              />
+            )}
+            <Button
+              size="icon"
+              variant="outline"
+              onClick={() => setIsEditing(!isEditing)}
+              className="w-12 h-12 flex-shrink-0"
+            >
+              <PenSquare className="h-6 w-6" />
+            </Button>
+            <Button
+              size="icon"
+              onClick={handleSend}
+              className="w-12 h-12 flex-shrink-0"
+            >
+              <Send className="h-6 w-6" />
+            </Button>
           </div>
-        </div>
-      </div>
-
-      <div className="max-w-lg mx-auto mt-12">
-        <p className="mb-4">Spoken Text: {text}</p>
-        {languageCode !== "en" && <p className="mb-4">Translation: {translation}</p>}
-
-        <div className="flex gap-8">
-          <Button onClick={handleAmenisSwap}>
-            Amenis Swap
-          </Button>
-          <Button onClick={thalaSwap}>
-            Thala Swap
-          </Button>
-          <Button onClick={handleLiquidSwap}>
-            Liquid Swap
-          </Button>
-          <Button onClick={handleEchelonSupply}>
-            Echelon Supply
-          </Button>
-          <Button onClick={handleEchelonBorrow}>
-            Echelon Borrow
-          </Button>
-          <Button onClick={handleDisplayHealthFactor}>
-            Display Health Factor
-          </Button>
-        </div>
-
-        {/* <Button
-          onClick={generatePrompt}
-          className="border rounded-md px-2 py-1 mt-8"
-        >
-          Execute the transaction
-        </Button> */}
-      </div>
+        </CardFooter>
+      </Card>
     </div>
   );
 };
