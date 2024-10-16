@@ -7,7 +7,7 @@ This project utilizes solvers to build and execute transactions on behalf of the
 ### Description
 Experience seamless trading and portfolio management through voice commands in any language. Leveraging advanced AI and speech technologies, our platform translates your spoken commands into actionable trades and portfolio adjustments. Harness the power of the Speech API, OpenAI, and the Brian API and SDK to make trading effortless and multilingual.
 
-![Screenshot 2024-10-15 184259](https://github.com/user-attachments/assets/298461b1-471b-48cb-a693-6cddb327b0bf)
+![Screenshot 2024-10-15 183821](https://github.com/user-attachments/assets/470700da-0112-46e9-8146-b214d1eb6d1a)
 
 ### Problem Statement
 
