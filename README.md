@@ -1,6 +1,6 @@
 # Aptos Vocal AI trading
 
-Bringing Aptos Defi on your fingertips , Now Trade Smartly on Aptos with just your Voice – In Any Language! and get the best routes for swap, lending-borrowing etc.
+Bringing Aptos Defi on your fingertips, Now Trade Smartly on Aptos with just your Voice – In Any Language! and get the best routes for swap, lending-borrowing etc.
 
 This project utilizes solvers to build and execute transactions on behalf of the users.
 
@@ -8,7 +8,6 @@ This project utilizes solvers to build and execute transactions on behalf of the
 Experience seamless trading and portfolio management through voice commands in any language. Leveraging advanced AI and speech technologies, our platform translates your spoken commands into actionable trades and portfolio adjustments. Harness the power of the Speech API, OpenAI, and the Brian API and SDK to make trading effortless and multilingual.
 
 ### Problem Statement
-
 
 **1. Wallet Setup Complexity:**  
 Users often face difficulties in setting up and managing crypto wallets, a prerequisite for engaging in DeFi activities. This technical barrier discourages potential users from entering the space.
@@ -25,12 +24,7 @@ Users struggle to identify the best routes for swaps, cross-chain swaps, and bri
 **5. Onboarding Challenges:**  
 The onboarding process for new users into the DeFi ecosystem is often cumbersome, involving multiple steps and a steep learning curve. Simplifying this process is crucial to enhancing user adoption.
 
-**6. Crypto-to-Fiat Conversion:**  
-Converting cryptocurrencies to fiat currency remains a significant hurdle for users, especially those unfamiliar with the available tools and platforms that facilitate this process.
-
 ### Features
-- **AppKit Swaps Feature:** We are Empowering users with integrated token swapping, simplifying the process of exchanging tokens for a frictionless experience within the app.
-- **AppKit On-Ramp:** Transform user experiences with in-app crypto purchases, enabling direct fiat-to-crypto transactions.
 - **Multilingual Voice Commands:** Execute trades and manage your portfolio using voice commands in languages like Spanish, German, French, and more.
 - **AI-Driven Translation:** Utilize advanced AI to accurately translate your voice commands, ensuring precise execution of your trading strategies.
 - **Speech API Integration:** Benefit from state-of-the-art speech recognition technology for seamless interaction.
@@ -38,7 +32,58 @@ Converting cryptocurrencies to fiat currency remains a significant hurdle for us
 - **Brian API & SDK:** Solve intents and execute interactions with high accuracy and efficiency.
 - **Secure and Reliable:** Ensure your transactions are secure with robust backend technology.
 - **User-Friendly Interface:** Enjoy an intuitive and responsive design tailored for a smooth user experience.
-- **Wallet Connect Integration:** Seamlessly connect your preferred crypto wallets for secure and straightforward transactions.
+- **Wallet Connect Integration:** Seamlessly connect your preferred aptos Wallets to the Dapp
+
+### Project Architecture
+
+## Project Architecture
+
+```mermaid
+graph TD
+    A[User] --> B{User Inputs}
+    B --> |Voice Command| C[Speech Recognition]
+    B --> |Typed Command| D[Text Input]
+    
+    C --> E[AI Processing]
+    D --> E[AI Processing]
+    
+    E --> F{Protocol Selection}
+    
+    %% Protocol Selections %%
+    F --> |ThalaSwap| G[ThalaSwap Router]
+    F --> |LiquidSwap| H[LiquidSwap SDK]
+    F --> |Echelon| I[Echelon Client]
+    F --> |PanoraSwap| J[Panora SDK]
+    F --> |Amnis| K[Amnis Protocol]
+    F --> |Cellar| L[Cellar Finance]
+    F --> |Aries Markets| M[Aries Protocol]
+    F --> |AskMe| N[Fetch Portfolio Details]
+    
+    %% Transaction Execution %%
+    G --> O[Transaction Execution]
+    H --> O[Transaction Execution]
+    I --> O[Transaction Execution]
+    J --> O[Transaction Execution]
+    K --> O[Transaction Execution]
+    L --> O[Transaction Execution]
+    M --> O[Transaction Execution]
+    
+    O --> P[Aptos Blockchain]
+    P --> Q{Transaction Outcome}
+    
+    %% AskMe Protocol Flow %%
+    N --> R[Fetch Portfolio API]
+    R --> S[Render Portfolio Data]
+    
+    %% Transaction Outcomes %%
+    Q --> |Success| T[Update User Portfolio]
+    Q --> |Failure| U[Error Handling and Feedback]
+    
+    %% Misc Components %%
+    V[Wallet Integration] --> P
+    W[Backend APIs] --> E
+    W --> T
+```
 
 ### How It Works
 1. **Voice Input:** Speak your trading commands in your preferred language.
@@ -47,7 +92,6 @@ Converting cryptocurrencies to fiat currency remains a significant hurdle for us
 4. **Intent Analysis:** The Brian API and SDK analyze the translated commands to understand the user's intent.
 5. **Execution:** The platform executes the trade or portfolio action based on the analyzed intent.
 6. **Token Swapping:** We are Utilizing AppKit’s Swaps feature to execute seamless token exchanges directly within the app.
-7. **Crypto Purchases:** Leveraging AppKit’s On-Ramp to facilitate in-app crypto purchases, thereby bridging the gap between fiat and digital currencies.
-8. **Feedback:** Receive real-time feedback and confirmation of your actions, all via voice interaction.
+7. **Feedback:** Receive real-time feedback and confirmation of your actions, all via voice interaction.
 
 This streamlined process ensures that language barriers are eliminated, making trading more accessible and convenient for users worldwide.

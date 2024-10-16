@@ -25,6 +25,7 @@ import { Account, Aptos, AptosConfig } from "@aptos-labs/ts-sdk";
 import { EchelonClient } from 'echelon-sdk-aptosmanager';
 
 import { AptosClient, AptosAccount, CoinClient, Types } from 'aptos';
+import { access } from "fs";
 
 const languageCodes: Record<string, string> = languageCodesData;
 const countryCodes: Record<string, string> = countryCodesData;
@@ -34,6 +35,7 @@ const TradewithAI = () => {
   const [text, setText] = useState("");
   const [translation, setTranslation] = useState("");
   const [language, setLanguage] = useState("en-US");
+  const [address, setAddress] = useState("0xbcb1d332e909fdf195a00a21e4b7e2d8a6a79c4142210c8f97419e3ae47ad8b7");
   const [messages, setMessages] = useState<Array<{
     role: "user" | "assistant";
     content: string;
@@ -45,6 +47,7 @@ const TradewithAI = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const [selectedProtocol, setSelectedProtocol] = useState("thalaswap");
+  const [portfolioDetails, setPortfolioDetails] = useState(null);
 
   const client = new Panora({
     apiKey: process.env.NEXT_PUBLIC_APP_PANORA_API_KEY!,
@@ -92,7 +95,22 @@ const TradewithAI = () => {
   };
 
   const handleSend = async () => {
-    if (text.trim()) {
+    if (text.trim() === "") return;
+
+    const userMessage = { role: "user", content: text };
+    setMessages((prevMessages) => [...prevMessages, userMessage]);
+
+    if (selectedProtocol === "askme") {
+      const portfolioData = await fetchPortfolioDetails(text.trim());
+      if (portfolioData) {
+        const summary = generatePortfolioSummary(portfolioData);
+        const aiResponse = { role: "assistant", content: summary };
+        setMessages((prevMessages) => [...prevMessages, aiResponse]);
+      } else {
+        const aiResponse = { role: "assistant", content: "I'm sorry, I couldn't fetch the portfolio details for that address. Please make sure it's a valid Aptos wallet address." };
+        setMessages((prevMessages) => [...prevMessages, aiResponse]);
+      }
+    } else {
       let messageToProcess = language === "en-US" ? text : translation;
       
       setMessages(prev => [...prev, {
@@ -612,6 +630,88 @@ const TradewithAI = () => {
     }
   };
 
+  const fetchPortfolioDetails = async (address: string) => {
+    try {
+      const response = await fetch(`https://portfolio-api.sonar.watch/v1/portfolio/fetch?useCache=false&address=${address}&addressSystem=move`, {
+        headers: {
+          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SONAR_KEY}`
+        }
+      });
+      const data = await response.json();
+      setPortfolioDetails(data);
+      return data;
+    } catch (error) {
+      console.error("Error fetching portfolio details:", error);
+      return null;
+    }
+  };
+
+  const generatePortfolioSummary = (data: any) => {
+    let summary = `📊 Portfolio Summary for ${data.owner.slice(0, 6)}...${data.owner.slice(-4)}\n\n`;
+
+    summary += `💰 Total Portfolio Value: $${data.value.toFixed(2)}\n\n`;
+
+    if (data.elements) {
+      data.elements.forEach((element: any) => {
+        if (element.type === "multiple" && element.label === "Wallet") {
+          summary += "🏦 Wallet Holdings:\n\n";
+          element.data.assets.forEach((asset: any) => {
+            const symbol = asset.data.address.split('-').pop();
+            summary += `• Amount: ${asset.data.amount.toFixed(4)} ${symbol}\n`;
+            summary += `  Value: $${asset.value.toFixed(2)}\n\n`;
+          });
+        } else if (element.type === "borrowlend") {
+          summary += `🔄 ${element.label} on ${element.platformId.charAt(0).toUpperCase() + element.platformId.slice(1)}:\n\n`;
+          summary += `📈 Total Value: $${element.value.toFixed(2)}\n\n`;
+          
+          if (element.data.suppliedAssets.length > 0) {
+            summary += "📥 Supplied Assets:\n\n";
+            element.data.suppliedAssets.forEach((asset: any) => {
+              const symbol = asset.data.address.split('-').pop();
+              summary += `• Asset: ${symbol}\n`;
+              summary += `  Amount: ${asset.data.amount.toFixed(4)}\n`;
+              summary += `  Value: $${asset.value.toFixed(2)}\n\n`;
+            });
+          }
+          
+          if (element.data.borrowedAssets.length > 0) {
+            summary += "📤 Borrowed Assets:\n\n";
+            element.data.borrowedAssets.forEach((asset: any) => {
+              const symbol = asset.data.address.split('-').pop();
+              summary += `• Asset: ${symbol}\n`;
+              summary += `  Amount: ${asset.data.amount.toFixed(4)}\n`;
+              summary += `  Value: $${asset.value.toFixed(2)}\n\n`;
+            });
+          }
+          
+          if (element.data.healthRatio) {
+            const healthRatio = element.data.healthRatio * 100;
+            let healthEmoji = "🟢";
+            if (healthRatio < 50) healthEmoji = "🔴";
+            else if (healthRatio < 75) healthEmoji = "🟠";
+            summary += `${healthEmoji} Health Ratio: ${healthRatio.toFixed(2)}%\n\n`;
+          }
+
+          if (element.data.suppliedYields && element.data.suppliedYields.length > 0) {
+            const yieldData = element.data.suppliedYields[0][0];
+            if (yieldData && yieldData.apy) {
+              summary += `🔼 Supply APY: ${(yieldData.apy * 100).toFixed(2)}%\n\n`;
+            }
+          }
+
+          if (element.data.borrowedYields && element.data.borrowedYields.length > 0) {
+            const yieldData = element.data.borrowedYields[0][0];
+            if (yieldData && yieldData.apy) {
+              summary += `🔽 Borrow APY: ${(yieldData.apy * 100).toFixed(2)}%\n\n`;
+            }
+          }
+        }
+      });
+    }
+
+    return summary;
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-900 to-gray-800 flex items-center justify-center p-4">
       <Card className="w-full max-w-4xl mx-auto h-[700px] flex flex-col bg-gray-800 text-white shadow-xl">
@@ -629,6 +729,15 @@ const TradewithAI = () => {
                 <SelectItem value="de-DE">Deutsch</SelectItem>
                 <SelectItem value="it-IT">Italiano</SelectItem>
                 <SelectItem value="pt-BR">Português</SelectItem>
+                <SelectItem value="hi-IN">Hindi</SelectItem>
+                <SelectItem value="ta-IN">Tamil</SelectItem>
+                <SelectItem value="te-IN">Telugu</SelectItem>
+                <SelectItem value="mr-IN">Marathi</SelectItem>
+                <SelectItem value="gu-IN">Gujarati</SelectItem>
+                <SelectItem value="kn-IN">Kannada</SelectItem>
+                <SelectItem value="ml-IN">Malayalam</SelectItem>
+                <SelectItem value="or-IN">Oriya</SelectItem>
+                
               </SelectContent>
             </Select>
             <Select value={selectedProtocol} onValueChange={setSelectedProtocol}>
@@ -640,6 +749,10 @@ const TradewithAI = () => {
                 <SelectItem value="liquidswap">Liquidswap</SelectItem>
                 <SelectItem value="echelon">Echelon Market</SelectItem>
                 <SelectItem value="panora">Panora Exchange</SelectItem>
+                <SelectItem value="amnis">Amnis</SelectItem>
+                <SelectItem value="cellar">Cellar Finance</SelectItem>
+                <SelectItem value="aries">Aries Markets</SelectItem>
+                <SelectItem value="askme">Ask me Anything</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -701,7 +814,7 @@ const TradewithAI = () => {
               onClick={() => setIsEditing(!isEditing)}
               className="w-12 h-12 flex-shrink-0"
             >
-              <PenSquare className="h-6 w-6" />
+              <PenSquare className="h-6 w-6 text-black" />
             </Button>
             <Button
               size="icon"
