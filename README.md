@@ -25,9 +25,6 @@ Users struggle to identify the best routes for swaps, cross-chain swaps, and bri
 **5. Onboarding Challenges:**  
 The onboarding process for new users into the DeFi ecosystem is often cumbersome, involving multiple steps and a steep learning curve. Simplifying this process is crucial to enhancing user adoption.
 
-**6. Crypto-to-Fiat Conversion:**  
-Converting cryptocurrencies to fiat currency remains a significant hurdle for users, especially those unfamiliar with the available tools and platforms that facilitate this process.
-
 ### Features
 - **Multilingual Voice Commands:** Execute trades and manage your portfolio using voice commands in languages like Spanish, German, French, and more.
 - **AI-Driven Translation:** Utilize advanced AI to accurately translate your voice commands, ensuring precise execution of your trading strategies.
