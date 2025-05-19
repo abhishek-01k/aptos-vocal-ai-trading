@@ -1,6 +1,6 @@
 # VOXTrades : Aptos Vocal AI trading
 
-Bringing Aptos Defi on your fingertips, Now Trade Smartly on Aptos with just your Voice – In Any Language! and get the best routes for swap, lending-borrowing etc.
+Bringing Aptos Defi on your fingertips, Now Trade Smartly on Aptos with just your Voice – In 15+ different Languages! and get the best routes for swapping, lending-borrowing etc.
 
 This project utilizes solvers to build and execute transactions on behalf of the users.
 
